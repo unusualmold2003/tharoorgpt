@@ -8,8 +8,8 @@
   ],
   "routes": [
     {
-      "src": "/(.*)",    // This pattern captures ALL incoming requests
-      "dest": "api/index.py" // And directs them to your FastAPI application
+      "src": "/(.*)",   
+      "dest": "api/index.py"
     }
   ]
 }
