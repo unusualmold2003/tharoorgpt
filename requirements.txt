@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+python-dotenv
+google-generativeai
+jinja2
+# Vercel needs gunicorn to run the server
+gunicorn

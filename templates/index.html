@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TharoorGPT</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* Define custom fonts from Google Fonts */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #111827; /* Tailwind gray-900 */
+        }
+        h1, .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        /* Custom scrollbar for a better look */
+        #chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-container::-webkit-scrollbar-track {
+            background: #1f2937; /* Tailwind gray-800 */
+        }
+        #chat-container::-webkit-scrollbar-thumb {
+            background-color: #4b5563; /* Tailwind gray-600 */
+            border-radius: 20px;
+            border: 3px solid #1f2937;
+        }
+        /* Styling for the vocabulary words */
+        .vocab-word {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-underline-offset: 4px;
+            color: #60a5fa; /* Tailwind blue-400 */
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .vocab-word:hover {
+            color: #93c5fd; /* Tailwind blue-300 */
+        }
+        /* --- FIX for Background Image --- */
+        /* This div contains the background image */
+        .bg-tharoor {
+            position: fixed; /* Keep it fixed in the viewport */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Place it behind the content */
+            background-image: url('/static/pixel_art.jpeg');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.2; /* Slightly increased opacity to make it more visible */
+        }
+        /* This establishes a stacking context, which is crucial for z-index to work reliably */
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+    <!-- The background image div -->
+    <div class="bg-tharoor"></div>
+    
+    <!-- A new wrapper div to ensure correct stacking -->
+    <div class="content-wrapper min-h-screen flex flex-col items-center justify-center p-4">
+        
+        <header class="text-center mb-6">
+            <h1 class="text-5xl md:text-6xl font-bold text-white drop-shadow-lg">TharoorGPT</h1>
+            <p class="text-gray-400 mt-2">Engage in Erudite Conversation</p>
+        </header>
+
+        <main class="w-full max-w-3xl bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-2xl flex flex-col h-[70vh]">
+            <!-- Chat Messages -->
+            <div id="chat-container" class="flex-1 p-6 overflow-y-auto">
+                <!-- Initial message from TharoorGPT -->
+                <div class="chat-message mb-4">
+                    <div class="bg-gray-800 rounded-lg p-4 max-w-max">
+                        <p class="text-gray-300">A salubrious welcome! Pray, articulate your query, and I shall endeavor to furnish a response of requisite perspicacity.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vocabulary Definitions Display -->
+            <div id="vocab-display" class="p-4 bg-gray-800/50 border-t border-gray-700 min-h-[60px] text-center transition-all duration-300">
+                <p class="text-gray-500 text-sm">Hover over a highlighted word to ascertain its meaning.</p>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="p-4 border-t border-gray-700">
+                <div id="limit-warning" class="text-center text-yellow-400 text-sm mb-2 hidden"></div>
+                <div class="flex items-center space-x-4">
+                    <input type="text" id="chat-input" placeholder="Converse here..." class="flex-1 bg-gray-800 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50" autocomplete="off">
+                    <button id="send-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        Send
+                    </button>
+                </div>
+                 <!-- Simplify Toggle -->
+                 <div class="flex items-center justify-center mt-4">
+                    <label for="simplify-toggle" class="mr-3 text-sm font-medium text-gray-400">Simplify Response</label>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="simplify-toggle" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+        </main>
+
+        <footer class="mt-8 text-center text-gray-500 text-sm">
+            <p>Built with FastAPI & Gemini. Limited to 7 elucidations per session.</p>
+        </footer>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        const vocabDisplay = document.getElementById('vocab-display');
+        const simplifyToggle = document.getElementById('simplify-toggle');
+        const limitWarning = document.getElementById('limit-warning');
+
+        let messageCount = 0;
+        const MESSAGE_LIMIT = 7;
+
+        const addMessageToChat = (message, sender) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message mb-4';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'rounded-lg p-4 max-w-max';
+            
+            if (sender === 'user') {
+                messageDiv.classList.add('flex', 'justify-end');
+                contentDiv.classList.add('bg-blue-600', 'text-white');
+                contentDiv.innerHTML = `<p>${message}</p>`;
+            } else {
+                contentDiv.classList.add('bg-gray-800');
+                // The message content will be set later after processing
+                contentDiv.innerHTML = message;
+            }
+            
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return contentDiv; // Return for further manipulation
+        };
+
+        const handleSend = async () => {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            if (messageCount >= MESSAGE_LIMIT) {
+                showLimitReached();
+                return;
+            }
+
+            addMessageToChat(message, 'user');
+            chatInput.value = '';
+            setLoadingState(true);
+
+            messageCount++;
+            updateLimitWarning();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: message,
+                        simplify: simplifyToggle.checked 
+                    }),
+                });
+
+                setLoadingState(false);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    addMessageToChat(`<p class="text-red-400">Error: ${errorData.detail || 'An unexpected error occurred.'}</p>`, 'bot');
+                    return;
+                }
+
+                const data = await response.json();
+                displayBotResponse(data);
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                setLoadingState(false);
+                addMessageToChat('<p class="text-red-400">A communication breakdown has occurred. Please check the console.</p>', 'bot');
+            }
+        };
+        
+        const displayBotResponse = (data) => {
+            let responseHtml = `<p>${data.tharoor_response}</p>`;
+            const vocabMap = new Map();
+
+            if (data.vocabulary && data.vocabulary.length > 0) {
+                data.vocabulary.forEach(item => {
+                    const regex = new RegExp(`\\b(${item.word})\\b`, 'gi');
+                    responseHtml = responseHtml.replace(regex, `<span class="vocab-word" data-word="${item.word}">${item.word}</span>`);
+                    vocabMap.set(item.word.toLowerCase(), item.definition);
+                });
+            }
+            
+            const botMessageContent = addMessageToChat(responseHtml, 'bot');
+
+            botMessageContent.querySelectorAll('.vocab-word').forEach(wordEl => {
+                wordEl.addEventListener('mouseover', () => {
+                    const word = wordEl.dataset.word;
+                    const definition = vocabMap.get(word.toLowerCase());
+                    vocabDisplay.innerHTML = `<p><strong class="text-blue-400">${word}:</strong> <span class="text-gray-300">${definition}</span></p>`;
+                });
+                wordEl.addEventListener('mouseout', () => {
+                     vocabDisplay.innerHTML = `<p class="text-gray-500 text-sm">Hover over a highlighted word to ascertain its meaning.</p>`;
+                });
+            });
+        };
+
+        const setLoadingState = (isLoading) => {
+            const botMessageContent = addMessageToChat('<div class="flex items-center justify-center space-x-2"><div class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></div><div class="w-2 h-2 rounded-full bg-gray-400 animate-pulse [animation-delay:0.2s]"></div><div class="w-2 h-2 rounded-full bg-gray-400 animate-pulse [animation-delay:0.4s]"></div></div>', 'bot');
+            chatInput.disabled = isLoading;
+            sendBtn.disabled = isLoading;
+            if(!isLoading) {
+                 // Remove the loading indicator
+                 const loaders = chatContainer.querySelectorAll('.animate-pulse');
+                 if(loaders.length > 0) {
+                     loaders[0].parentElement.parentElement.parentElement.remove();
+                 }
+            }
+        };
+
+        const updateLimitWarning = () => {
+            const messagesLeft = MESSAGE_LIMIT - messageCount;
+            if (messagesLeft <= 2 && messagesLeft > 0) {
+                limitWarning.classList.remove('hidden');
+                limitWarning.textContent = `You have ${messagesLeft} message(s) remaining.`;
+            } else {
+                limitWarning.classList.add('hidden');
+            }
+            if (messagesLeft <= 0) {
+                showLimitReached();
+            }
+        };
+        
+        const showLimitReached = () => {
+            chatInput.disabled = true;
+            sendBtn.disabled = true;
+            chatInput.placeholder = "Message limit reached.";
+            limitWarning.classList.remove('hidden');
+            limitWarning.textContent = `You have reached the ${MESSAGE_LIMIT} message limit.`;
+            limitWarning.classList.remove('text-yellow-400');
+            limitWarning.classList.add('text-red-500');
+        };
+
+        sendBtn.addEventListener('click', handleSend);
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                handleSend();
+            }
+        });
+    </script>
+</body>
+</html>
