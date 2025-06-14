@@ -73,4 +73,4 @@ TharoorGPT/
 Important: Place the provided index.html content into templates/index.html and place your desired pixelated image as pixel_art.jpeg in the static directory.
 
 #### 6. Run the app!
-Visit [TharoorGPT](https://) to see it in live action!
+Visit [TharoorGPT](https://tharoorgpt.vercel.app/) to see it in live action!
